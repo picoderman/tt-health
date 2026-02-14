@@ -2,7 +2,7 @@
   "name": "tt-health",
   "type": "module",
   "bin": {
-    "tt-health": "./bin/tth"
+    "tth": "./bin/tth"
   },
   "scripts": {
     "start": "bun ./src/root.tsx"
