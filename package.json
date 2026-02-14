@@ -5,13 +5,15 @@
     "tt-health": "./bin/tt-health"
   },
   "scripts": {
-    "start": "bun run ./src/root.tsx"
+    "start": "bun ./src/root.tsx"
   },
   "dependencies": {
-    "@types/node": "^25.2.3",
-    "@types/react": "^19.2.14",
     "ink": "6.6.0",
     "ink-text-input": "6.0.0",
     "react": "19.2.3"
+  },
+  "devDependencies": {
+    "@types/node": "^25.2.3",
+    "@types/react": "^19.2.14"
   }
 }
