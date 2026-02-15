@@ -3,8 +3,8 @@
   "version": "0.1.0",
   "type": "module",
   "bin": {
-    "tt-health": "./bin/tth",
-    "tth": "./bin/tth"
+    "tt-health": "./src/root.tsx",
+    "tth": "./src/root.tsx"
   },
   "scripts": {
     "start": "bun ./src/root.tsx"
