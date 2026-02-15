@@ -1,7 +1,11 @@
 {
   "name": "tt-health",
+  "version": "0.1.0",
   "type": "module",
-  "bin": "./src/root.tsx",
+  "bin": {
+    "tt-health": "./bin/tth",
+    "tth": "./bin/tth"
+  },
   "scripts": {
     "start": "bun ./src/root.tsx"
   },
