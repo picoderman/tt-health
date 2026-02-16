@@ -14,7 +14,7 @@ import { palette } from '../tui-kit/consts.ts';
 import {
   EXCLUDED_DIRS,
   FILE_EXTENSIONS,
-  LABEL_RULES,
+  getLabelRules,
 } from './consts.ts';
 
 type PatternCounts = Record<string, number>;
@@ -286,7 +286,7 @@ export function useFileTree(
     (node: FileTreeNode): FileTreeLabel[] => {
       const labels: FileTreeLabel[] = [];
 
-      for (const rule of LABEL_RULES) {
+      for (const rule of getLabelRules()) {
         if (rule.test(node.name, node.isDirectory)) {
           labels.push(rule.label);
         }
@@ -312,7 +312,7 @@ export function useFileTree(
 
       return labels;
     },
-    [commentCountMap, commentPatterns],
+    [commentCountMap, commentPatterns, palette.info, palette.success],
   );
 
   const getTotalCommentCount = useCallback(

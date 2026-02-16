@@ -1,11 +1,16 @@
 import { Box, Text } from 'ink';
 import type { FC } from 'react';
 
+import { useAppState } from '../state/useAppState.ts';
 import type { FileTreeNode } from '../tui-kit/components/FileTree.tsx';
-import { Hint } from '../tui-kit/components/Hint.tsx';
-import { palette } from '../tui-kit/consts.ts';
+import { palette, type AppTheme } from '../tui-kit/consts.ts';
 
-import { FILTER_SUMMARY, HINT_TEXT } from './consts.ts';
+import {
+  APP_THEME_STATE_KEY,
+  FILTER_SUMMARY,
+  getThemeHintText,
+  HINT_TEXT,
+} from './consts.ts';
 
 interface StatusBarProps {
   selectedFile: FileTreeNode | null;
@@ -17,29 +22,36 @@ export const StatusBar: FC<StatusBarProps> = ({
   selectedFile,
   commentPatterns,
   isEditingPatterns,
-}) => (
-  <>
-    <Box marginTop={1}>
-      <Hint text={HINT_TEXT} />
-    </Box>
+}) => {
+  const [theme] = useAppState<AppTheme>(APP_THEME_STATE_KEY, 'dark');
 
-    <Box marginTop={1}>
-      <Text color={palette.textDim}>{FILTER_SUMMARY}</Text>
-    </Box>
-
-    <Box marginTop={1}>
-      <Text color={palette.textDim}>Comment markers: </Text>
-      <Text color={palette.info}>{commentPatterns.join(', ')}</Text>
-      {isEditingPatterns && (
-        <Text color={palette.accent}> (editing: Enter save, Esc cancel)</Text>
-      )}
-    </Box>
-
-    {selectedFile && (
+  return (
+    <>
       <Box marginTop={1}>
-        <Text color={palette.textDim}>Selected: </Text>
-        <Text color={palette.accent}>{selectedFile.path}</Text>
+        <Text color={palette.textDim}>{HINT_TEXT}</Text>
+        <Text color={palette.inverseText} bold>
+          {getThemeHintText(theme)}
+        </Text>
       </Box>
-    )}
-  </>
-);
+
+      <Box marginTop={1}>
+        <Text color={palette.textDim}>{FILTER_SUMMARY}</Text>
+      </Box>
+
+      <Box marginTop={1}>
+        <Text color={palette.textDim}>Comment markers: </Text>
+        <Text color={palette.info}>{commentPatterns.join(', ')}</Text>
+        {isEditingPatterns && (
+          <Text color={palette.accent}> (editing: Enter save, Esc cancel)</Text>
+        )}
+      </Box>
+
+      {selectedFile && (
+        <Box marginTop={1}>
+          <Text color={palette.textDim}>Selected: </Text>
+          <Text color={palette.accent}>{selectedFile.path}</Text>
+        </Box>
+      )}
+    </>
+  );
+};

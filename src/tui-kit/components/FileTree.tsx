@@ -455,10 +455,7 @@ const FileTreeRow: FC<FileTreeRowProps> = ({
       })}
 
       {countColumnLabels.length > 0 && (
-        <Text
-          color={shouldDimByDepth ? palette.borderDim : palette.border}
-          dimColor
-        >
+        <Text color={shouldDimByDepth ? palette.borderDim : palette.border}>
           {leader}
         </Text>
       )}

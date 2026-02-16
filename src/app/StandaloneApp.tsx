@@ -1,10 +1,17 @@
 import { Box, Text, useInput } from 'ink';
 import type { FC } from 'react';
 
-import { palette } from '../tui-kit/consts.ts';
+import { useAppState } from '../state/useAppState.ts';
+import {
+  applyTheme,
+  palette,
+  toggleTheme,
+  type AppTheme,
+} from '../tui-kit/consts.ts';
 import { useAppExit, useTerminalSize } from '../tui-kit/hooks/useTerminal.ts';
 
 import { App as FsApp } from './App.tsx';
+import { APP_THEME_STATE_KEY } from './consts.ts';
 
 interface StandaloneAppProps {
   dir: string;
@@ -14,10 +21,21 @@ interface StandaloneAppProps {
 export const StandaloneApp: FC<StandaloneAppProps> = ({ dir }) => {
   const { width, height } = useTerminalSize();
   const exit = useAppExit();
+  const [theme, setTheme] = useAppState<AppTheme>(
+    APP_THEME_STATE_KEY,
+    'dark',
+  );
+
+  applyTheme(theme);
 
   useInput((input, key) => {
     if (input === 'q' || (key.ctrl && input === 'c')) {
       exit();
+      return;
+    }
+
+    if (input.toLowerCase() === 't') {
+      setTheme((currentTheme) => toggleTheme(currentTheme));
     }
   });
 
@@ -30,7 +48,7 @@ export const StandaloneApp: FC<StandaloneAppProps> = ({ dir }) => {
       </Box>
 
       <Box width={width}>
-        <Text color={palette.textDim}>{` env: local | q quit`.padEnd(width)}</Text>
+        <Text color={palette.textDim}>{` q quit`.padEnd(width)}</Text>
       </Box>
     </Box>
   );
