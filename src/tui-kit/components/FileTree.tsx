@@ -453,7 +453,9 @@ const FileTreeRow: FC<FileTreeRowProps> = ({
       })}
 
       {countColumnLabels.length > 0 && (
-        <Text color={palette.text}>{leader}</Text>
+        <Text color={rowColor} bold={rowBold}>
+          {' '}{leader}{' '}
+        </Text>
       )}
 
       {countColumnLabels.map((label, i) => {
