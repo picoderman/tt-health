@@ -48,7 +48,7 @@ export const StandaloneApp: FC<StandaloneAppProps> = ({ dir }) => {
       </Box>
 
       <Box width={width}>
-        <Text color={palette.textDim}>{` q quit`.padEnd(width)}</Text>
+        <Text color={palette.text}>{` q quit`.padEnd(width)}</Text>
       </Box>
     </Box>
   );

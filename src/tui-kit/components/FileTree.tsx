@@ -374,23 +374,30 @@ const FileTreeRow: FC<FileTreeRowProps> = ({
       : chars.folderClosed
     : chars.file;
 
-  const shouldDimByDepth = dimNonActiveDepth && !isActiveDepth;
+  const highlightActiveDepth = dimNonActiveDepth && isActiveDepth;
+  const isMonoMode = palette.colorMode === 'mono';
+  const isColoredActiveDepth = highlightActiveDepth && !isMonoMode;
 
-  const textColor = isSelected
+  const marker = isSelected ? '>' : highlightActiveDepth ? '•' : ' ';
+  const markerColor = isSelected
     ? palette.accent
-    : shouldDimByDepth
-      ? palette.borderDim
+    : isColoredActiveDepth
+      ? palette.info
       : palette.text;
+  const markerBold = isSelected || (highlightActiveDepth && isMonoMode);
+
+  const rowColor = isSelected
+    ? palette.accent
+    : isColoredActiveDepth
+      ? palette.info
+      : palette.text;
+  const rowBold = isSelected || (highlightActiveDepth && isMonoMode);
 
   const iconColor = node.isDirectory
     ? isSelected
       ? palette.accentBright
-      : shouldDimByDepth
-        ? palette.borderDim
-        : palette.info
-    : shouldDimByDepth
-      ? palette.borderDim
-      : palette.textDim;
+      : rowColor
+    : rowColor;
 
   const inlineLabelTextLength = inlineLabels.reduce(
     (total, label) => total + label.text.length + 3,
@@ -416,38 +423,26 @@ const FileTreeRow: FC<FileTreeRowProps> = ({
 
   return (
     <Box flexDirection="row">
-      <Text
-        color={
-          isSelected
-            ? palette.accent
-            : shouldDimByDepth
-              ? palette.borderDim
-              : palette.border
-        }
-      >
+      <Text color={markerColor} bold={markerBold}>
+        {marker}{' '}
+      </Text>
+
+      <Text color={rowColor}>
         {prefix}
       </Text>
 
       <Text color={iconColor}>{icon} </Text>
 
-      <Text color={textColor} bold={isSelected}>
+      <Text color={rowColor} bold={rowBold}>
         {node.name}
       </Text>
 
-      {node.isDirectory && (
-        <Text color={shouldDimByDepth ? palette.borderDim : palette.textDim}>
-          /
-        </Text>
-      )}
+      {node.isDirectory && <Text color={rowColor}>/</Text>}
 
       {inlineLabels.map((label, i) => {
-        const shouldDimInfoLabel =
-          label.color === palette.info && !isActiveDepth;
+        const labelColor = isMonoMode ? palette.text : label.color;
         return (
-          <Text
-            key={`inline-${i}`}
-            color={shouldDimInfoLabel ? palette.borderDim : label.color}
-          >
+          <Text key={`inline-${i}`} color={labelColor}>
             {' '}
             [{label.text}]
           </Text>
@@ -455,19 +450,13 @@ const FileTreeRow: FC<FileTreeRowProps> = ({
       })}
 
       {countColumnLabels.length > 0 && (
-        <Text color={shouldDimByDepth ? palette.borderDim : palette.border}>
-          {leader}
-        </Text>
+        <Text color={palette.text}>{leader}</Text>
       )}
 
       {countColumnLabels.map((label, i) => {
-        const shouldDimInfoLabel =
-          label.color === palette.info && !isActiveDepth;
+        const labelColor = isMonoMode ? palette.text : label.color;
         return (
-          <Text
-            key={`column-${i}`}
-            color={shouldDimInfoLabel ? palette.borderDim : label.color}
-          >
+          <Text key={`column-${i}`} color={labelColor}>
             {i === 0 ? '' : ' '}[{label.text}]
           </Text>
         );

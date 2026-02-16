@@ -28,18 +28,18 @@ export const StatusBar: FC<StatusBarProps> = ({
   return (
     <>
       <Box marginTop={1}>
-        <Text color={palette.textDim}>{HINT_TEXT}</Text>
-        <Text color={palette.inverseText} bold>
+        <Text color={palette.text}>{HINT_TEXT}</Text>
+        <Text color={palette.info} bold>
           {getThemeHintText(theme)}
         </Text>
       </Box>
 
       <Box marginTop={1}>
-        <Text color={palette.textDim}>{FILTER_SUMMARY}</Text>
+        <Text color={palette.text}>{FILTER_SUMMARY}</Text>
       </Box>
 
       <Box marginTop={1}>
-        <Text color={palette.textDim}>Comment markers: </Text>
+        <Text color={palette.text}>Comment markers: </Text>
         <Text color={palette.info}>{commentPatterns.join(', ')}</Text>
         {isEditingPatterns && (
           <Text color={palette.accent}> (editing: Enter save, Esc cancel)</Text>
@@ -48,7 +48,7 @@ export const StatusBar: FC<StatusBarProps> = ({
 
       {selectedFile && (
         <Box marginTop={1}>
-          <Text color={palette.textDim}>Selected: </Text>
+          <Text color={palette.text}>Selected: </Text>
           <Text color={palette.accent}>{selectedFile.path}</Text>
         </Box>
       )}
