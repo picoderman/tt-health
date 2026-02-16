@@ -29,12 +29,14 @@ export const StandaloneApp: FC<StandaloneAppProps> = ({ dir }) => {
   applyTheme(theme);
 
   useInput((input, key) => {
-    if (input === 'q' || (key.ctrl && input === 'c')) {
+    const normalizedInput = input.toLowerCase();
+
+    if (normalizedInput === 'q' || (key.ctrl && normalizedInput === 'c')) {
       exit();
       return;
     }
 
-    if (input.toLowerCase() === 't') {
+    if (normalizedInput === 't') {
       setTheme((currentTheme) => toggleTheme(currentTheme));
     }
   });
@@ -48,7 +50,9 @@ export const StandaloneApp: FC<StandaloneAppProps> = ({ dir }) => {
       </Box>
 
       <Box width={width}>
-        <Text color={palette.text}>{` q quit`.padEnd(width)}</Text>
+        <Text color={palette.text} dimColor>
+          {` q quit`.padEnd(width)}
+        </Text>
       </Box>
     </Box>
   );

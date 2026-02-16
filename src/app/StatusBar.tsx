@@ -28,21 +28,32 @@ export const StatusBar: FC<StatusBarProps> = ({
   return (
     <>
       <Box marginTop={1}>
-        <Text color={palette.text}>{HINT_TEXT}</Text>
-        <Text color={palette.info} bold>
+        <Text color={palette.text} dimColor>
+          {HINT_TEXT}
+        </Text>
+        <Text color={palette.info} bold dimColor>
           {getThemeHintText(theme)}
         </Text>
       </Box>
 
       <Box marginTop={1}>
-        <Text color={palette.text}>{FILTER_SUMMARY}</Text>
+        <Text color={palette.text} dimColor>
+          {FILTER_SUMMARY}
+        </Text>
       </Box>
 
       <Box marginTop={1}>
-        <Text color={palette.text}>Comment markers: </Text>
-        <Text color={palette.info}>{commentPatterns.join(', ')}</Text>
+        <Text color={palette.text} dimColor>
+          Comment markers:{' '}
+        </Text>
+        <Text color={palette.info} dimColor>
+          {commentPatterns.join(', ')}
+        </Text>
         {isEditingPatterns && (
-          <Text color={palette.accent}> (editing: Enter save, Esc cancel)</Text>
+          <Text color={palette.accent} dimColor>
+            {' '}
+            (editing: Enter save, Esc cancel)
+          </Text>
         )}
       </Box>
 

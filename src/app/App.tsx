@@ -102,7 +102,9 @@ export const App: FC<AppProps> = ({ dir }) => {
       return;
     }
 
-    if (input === 'c' || input === 'C') {
+    const normalizedInput = input.toLowerCase();
+
+    if (normalizedInput === 'c') {
       setCommentPatternsInput(commentPatterns.join(', '));
       setCommentPatternError(null);
       setIsEditingPatterns(true);

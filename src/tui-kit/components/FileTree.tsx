@@ -266,11 +266,7 @@ export const FileTree: FC<FileTreeProps> = ({
         } else {
           const parentIndex = findParentIndex(currentNode);
           if (parentIndex >= 0) {
-            const parentNode = visibleNodes[parentIndex];
-            if (parentNode) {
-              collapseSubtree(parentNode.path);
-              setSelectedIndex(parentIndex);
-            }
+            setSelectedIndex(parentIndex);
           }
         }
       } else if (key.return && currentNode) {
@@ -304,13 +300,20 @@ export const FileTree: FC<FileTreeProps> = ({
     );
   }
 
-  const activeDepth = visibleNodes[selectedIndex]?.depth ?? 0;
+  const focusedNode = visibleNodes[selectedIndex];
+  const focusedParentPath =
+    focusedNode && focusedNode.depth > 0 ? dirname(focusedNode.path) : null;
 
   return (
     <Box flexDirection="column">
       {visibleNodes.map((node, index) => {
         const isSelected = index === selectedIndex;
         const isExpanded = expanded[node.path] ?? false;
+        const isInActiveLayer = focusedNode
+          ? focusedNode.depth === 0
+            ? node.path === focusedNode.path
+            : dirname(node.path) === focusedParentPath
+          : false;
 
         return (
           <FileTreeRow
@@ -318,7 +321,7 @@ export const FileTree: FC<FileTreeProps> = ({
             node={node}
             isSelected={isSelected}
             isExpanded={isExpanded}
-            isActiveDepth={node.depth === activeDepth}
+            isInActiveLayer={isInActiveLayer}
             dimNonActiveDepth={dimNonActiveDepth}
           />
         );
@@ -331,7 +334,7 @@ interface FileTreeRowProps {
   node: FileTreeNode;
   isSelected: boolean;
   isExpanded: boolean;
-  isActiveDepth: boolean;
+  isInActiveLayer: boolean;
   dimNonActiveDepth: boolean;
 }
 
@@ -339,7 +342,7 @@ const FileTreeRow: FC<FileTreeRowProps> = ({
   node,
   isSelected,
   isExpanded,
-  isActiveDepth,
+  isInActiveLayer,
   dimNonActiveDepth,
 }) => {
   // Build prefix for tree lines
@@ -374,24 +377,24 @@ const FileTreeRow: FC<FileTreeRowProps> = ({
       : chars.folderClosed
     : chars.file;
 
-  const highlightActiveDepth = dimNonActiveDepth && isActiveDepth;
+  const highlightActiveLayer = dimNonActiveDepth && isInActiveLayer;
   const isMonoMode = palette.colorMode === 'mono';
-  const isColoredActiveDepth = highlightActiveDepth && !isMonoMode;
+  const isColoredActiveLayer = highlightActiveLayer && !isMonoMode;
 
-  const marker = isSelected ? '>' : highlightActiveDepth ? '•' : ' ';
+  const marker = isSelected ? '>' : highlightActiveLayer ? '•' : ' ';
   const markerColor = isSelected
     ? palette.accent
-    : isColoredActiveDepth
+    : isColoredActiveLayer
       ? palette.info
       : palette.text;
-  const markerBold = isSelected || (highlightActiveDepth && isMonoMode);
+  const markerBold = isSelected || (highlightActiveLayer && isMonoMode);
 
   const rowColor = isSelected
     ? palette.accent
-    : isColoredActiveDepth
+    : isColoredActiveLayer
       ? palette.info
       : palette.text;
-  const rowBold = isSelected || (highlightActiveDepth && isMonoMode);
+  const rowBold = isSelected || (highlightActiveLayer && isMonoMode);
 
   const iconColor = node.isDirectory
     ? isSelected
