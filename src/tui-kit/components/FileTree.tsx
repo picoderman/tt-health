@@ -430,9 +430,7 @@ const FileTreeRow: FC<FileTreeRowProps> = ({
         {marker}{' '}
       </Text>
 
-      <Text color={rowColor}>
-        {prefix}
-      </Text>
+      <Text color={rowColor}>{prefix}</Text>
 
       <Text color={iconColor}>{icon} </Text>
 
@@ -454,7 +452,8 @@ const FileTreeRow: FC<FileTreeRowProps> = ({
 
       {countColumnLabels.length > 0 && (
         <Text color={rowColor} bold={rowBold}>
-          {' '}{leader}{' '}
+          {' '}
+          {leader}{' '}
         </Text>
       )}
 

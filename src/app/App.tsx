@@ -1,4 +1,5 @@
 import { Box, Text, useInput } from 'ink';
+import TextInput from 'ink-text-input';
 import { useEffect, useState, type FC } from 'react';
 
 import { useAppState } from '../state/useAppState.js';
@@ -17,7 +18,6 @@ import {
 } from './consts.ts';
 import { StatusBar } from './StatusBar.tsx';
 import { useFileTree } from './useFileTree.ts';
-import TextInput from "ink-text-input";
 
 const normalizeCommentPatterns = (patterns: readonly string[]): string[] => {
   const unique: string[] = [];

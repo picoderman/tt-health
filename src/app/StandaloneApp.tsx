@@ -21,10 +21,7 @@ interface StandaloneAppProps {
 export const StandaloneApp: FC<StandaloneAppProps> = ({ dir }) => {
   const { width, height } = useTerminalSize();
   const exit = useAppExit();
-  const [theme, setTheme] = useAppState<AppTheme>(
-    APP_THEME_STATE_KEY,
-    'dark',
-  );
+  const [theme, setTheme] = useAppState<AppTheme>(APP_THEME_STATE_KEY, 'dark');
 
   applyTheme(theme);
 
@@ -45,7 +42,12 @@ export const StandaloneApp: FC<StandaloneAppProps> = ({ dir }) => {
     <Box width={width} minHeight={height - 1} flexDirection="column">
       <Box flexGrow={1} />
 
-      <Box width={width} flexDirection="column" alignItems="center" paddingX={2}>
+      <Box
+        width={width}
+        flexDirection="column"
+        alignItems="center"
+        paddingX={2}
+      >
         <FsApp dir={dir} />
       </Box>
 

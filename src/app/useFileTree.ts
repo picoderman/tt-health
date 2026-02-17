@@ -4,6 +4,7 @@ import { readFileSync, readdirSync, statSync } from 'node:fs';
 import { join } from 'node:path';
 
 import { useState, useCallback, useMemo, useRef } from 'react';
+
 import type {
   FileTreeLabel,
   FileTreeNode,
@@ -11,11 +12,7 @@ import type {
 } from '../tui-kit/components/FileTree.tsx';
 import { palette } from '../tui-kit/consts.ts';
 
-import {
-  EXCLUDED_DIRS,
-  FILE_EXTENSIONS,
-  getLabelRules,
-} from './consts.ts';
+import { EXCLUDED_DIRS, FILE_EXTENSIONS, getLabelRules } from './consts.ts';
 
 type PatternCounts = Record<string, number>;
 type CountMap = Map<string, PatternCounts>;
@@ -174,7 +171,7 @@ const sumCounts = (
     counts[pattern] = (left[pattern] ?? 0) + (right[pattern] ?? 0);
     return counts;
   }, createEmptyCounts(patterns));
-}
+};
 
 const buildCommentCountMap = (
   rootPath: string,
@@ -211,10 +208,8 @@ const buildCommentCountMap = (
         }
 
         const previousEntry = rootCache[entryPath];
-        const {
-          counts: fileCount,
-          cacheEntry: nextCacheEntry,
-        } = getFileCommentCounts(entryPath, patterns, previousEntry);
+        const { counts: fileCount, cacheEntry: nextCacheEntry } =
+          getFileCommentCounts(entryPath, patterns, previousEntry);
 
         if (nextCacheEntry) {
           nextRootCache[entryPath] = nextCacheEntry;
@@ -253,12 +248,16 @@ export function useFileTree(
       };
     }
 
+    // eslint-disable-next-line react-hooks/refs
     const currentRootCache = cacheByRootRef.current[rootPath] ?? {};
     const buildResult = buildCommentCountMap(
       rootPath,
       commentPatterns,
+      // eslint-disable-next-line react-hooks/refs
       currentRootCache,
     );
+
+    // eslint-disable-next-line react-hooks/refs
     cacheByRootRef.current[rootPath] = buildResult.nextRootCache;
 
     return {
@@ -312,7 +311,7 @@ export function useFileTree(
 
       return labels;
     },
-    [commentCountMap, commentPatterns, palette.info, palette.success],
+    [commentCountMap, commentPatterns],
   );
 
   const getTotalCommentCount = useCallback(

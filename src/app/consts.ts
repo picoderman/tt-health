@@ -5,9 +5,7 @@ export const FILE_EXTENSIONS = ['js', 'ts', 'jsx', 'tsx'] as const;
 
 export const EXCLUDED_DIRS = ['node_modules'] as const;
 
-export const DEFAULT_COMMENT_PATTERNS = [
-  '@ts-expect-error',
-] as const;
+export const DEFAULT_COMMENT_PATTERNS = ['@ts-expect-error'] as const;
 
 // DO: Add an ability to add/remove and switch between multiple patterns
 export const MAX_COMMENT_PATTERNS = 4;

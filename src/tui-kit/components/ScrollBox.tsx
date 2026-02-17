@@ -99,8 +99,6 @@ export const ScrollBox = ({
   useScrollEvents(onUp, onDown);
 
   useEffect(() => {
-    // DO: Fix all issues by compiler requirements
-    // eslint-disable-next-line react-hooks/set-state-in-effect
     measure();
   });
 

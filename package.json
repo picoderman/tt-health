@@ -7,7 +7,10 @@
     "tth": "./src/root.tsx"
   },
   "scripts": {
-    "start": "bun ./src/root.tsx"
+    "start": "bun ./src/root.tsx",
+    "prettier": "prettier --write ./src",
+    "lint": "eslint",
+    "lint-fix": "eslint --fix"
   },
   "dependencies": {
     "ink": "6.6.0",
@@ -15,7 +18,18 @@
     "react": "19.2.3"
   },
   "devDependencies": {
+    "@eslint/js": "9.16.0",
     "@types/node": "^25.2.3",
-    "@types/react": "^19.2.14"
+    "@types/react": "^19.2.14",
+    "eslint": "9.16.0",
+    "eslint-plugin-import": "2.31.0",
+    "eslint-plugin-prettier": "5.2.1",
+    "eslint-plugin-react": "^7.37.5",
+    "eslint-plugin-react-hooks": "^7.0.1",
+    "eslint-plugin-workspaces": "0.10.1",
+    "globals": "15.12.0",
+    "prettier": "3.4.1",
+    "typescript": "5.5.4",
+    "typescript-eslint": "8.16.0"
   }
 }
