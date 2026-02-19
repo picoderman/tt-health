@@ -2,50 +2,53 @@ import { readFileSync, writeFileSync, existsSync } from 'fs';
 import { join, dirname } from 'path';
 import { fileURLToPath } from 'url';
 
+import stringify from 'safe-stable-stringify';
+
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const STATE_PATH = join(__dirname, 'state.json');
 
-interface State {
+export type State = {
   appState: Record<string, unknown>;
-}
+};
 
 const defaultState: State = {
   appState: {},
 };
 
-type StateChangeHandler = (key: string, value: unknown) => void;
+export type StateChangeHandler = (key: string, value: unknown) => void;
 const subscribers = new Set<StateChangeHandler>();
 
-export function subscribeToState(handler: StateChangeHandler): void {
+export const subscribeToState = (handler: StateChangeHandler) => {
   subscribers.add(handler);
-}
+};
 
-export function unsubscribeFromState(handler: StateChangeHandler): void {
+export const unsubscribeFromState = (handler: StateChangeHandler) => {
   subscribers.delete(handler);
-}
+};
 
-function notifySubscribers(key: string, value: unknown): void {
-  for (const handler of subscribers) {
-    handler(key, value);
-  }
-}
-
-export function getAppState<T>(key: string, defaultValue: T): T {
+export const retrieveAppState = <T>(key: string, defaultValue: T) => {
   const state = loadState();
+
   if (key in state.appState) {
+    // It's okay
+    // eslint-disable-next-line @blumintinc/blumint/no-type-assertion-returns
     return state.appState[key] as T;
   }
+
   return defaultValue;
-}
+};
 
-export function setAppState<T>(key: string, value: T): void {
-  const state = loadState();
-  state.appState[key] = value;
-  saveState(state);
-  notifySubscribers(key, value);
-}
+const notifySubscribers = (key: string, value: unknown) => {
+  for (const onStateChange of subscribers) {
+    onStateChange(key, value);
+  }
+};
 
-export function loadState(): State {
+export const saveState = (state: State) => {
+  writeFileSync(STATE_PATH, stringify(state, null, 2));
+};
+
+export const loadState = () => {
   if (!existsSync(STATE_PATH)) {
     return defaultState;
   }
@@ -60,12 +63,15 @@ export function loadState(): State {
         ? (parsed.appState as Record<string, unknown>)
         : {};
 
-    return { appState };
+    return { appState } as const;
   } catch {
     return defaultState;
   }
-}
+};
 
-export function saveState(state: State): void {
-  writeFileSync(STATE_PATH, JSON.stringify(state, null, 2));
-}
+export const setAppState = (key: string, value: unknown) => {
+  const state = loadState();
+  state.appState[key] = value;
+  saveState(state);
+  notifySubscribers(key, value);
+};

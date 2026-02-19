@@ -1,64 +1,20 @@
-import { Box, Text, measureElement } from 'ink';
-import {
-  type ComponentProps,
-  useCallback,
-  useEffect,
-  useRef,
-  useState,
-} from 'react';
+import { Box, type DOMElement, measureElement } from 'ink';
+import { type ComponentProps, useEffect, useRef, useState } from 'react';
+import useLatestCallback from 'use-latest-callback';
 
-import { palette } from '../consts.ts';
-import { useScrollEvents } from '../hooks/useScrollEvents.ts';
+import { useScrollEvents } from '../../hooks/useScrollEvents.ts';
 
-// DO: Move to separate file
-const Scrollbar = ({
-  containerHeight,
-  contentHeight,
-  scroll,
-  maxScroll,
-}: {
-  containerHeight: number;
-  contentHeight: number;
-  scroll: number;
-  maxScroll: number;
-}) => {
-  const thumbSize = Math.max(
-    1,
-    Math.round((containerHeight * containerHeight) / contentHeight),
-  );
+import { Scrollbar } from './Scrollbar.tsx';
+const DEFAULT_FOCUS_PADDING = 2;
 
-  const thumbPosition = Math.round(
-    (scroll / maxScroll) * (containerHeight - thumbSize),
-  );
-
-  const rows: Array<{ char: string; color: string }> = [];
-  for (let i = 0; i < containerHeight; i++) {
-    if (i >= thumbPosition && i < thumbPosition + thumbSize) {
-      rows.push({ char: '█', color: palette.accent });
-    } else {
-      rows.push({ char: '│', color: palette.border });
-    }
-  }
-
-  return (
-    <Box flexDirection="column" width={1} flexShrink={0}>
-      {rows.map((row, i) => (
-        <Text key={i} color={row.color}>
-          {row.char}
-        </Text>
-      ))}
-    </Box>
-  );
-};
-
-interface ScrollBoxProps extends ComponentProps<typeof Box> {
+type ScrollBoxProps = ComponentProps<typeof Box> & {
   focusRow?: number;
   focusPadding?: number;
-}
+};
 
 export const ScrollBox = ({
   focusRow,
-  focusPadding = 2,
+  focusPadding = DEFAULT_FOCUS_PADDING,
   ...props
 }: ScrollBoxProps) => {
   const [scroll, setScroll] = useState(0);
@@ -66,35 +22,36 @@ export const ScrollBox = ({
     containerHeight: number;
     contentHeight: number;
   } | null>(null);
-  const contentRef = useRef(null);
-  const containerRef = useRef(null);
+  const contentRef = useRef<DOMElement>(null);
+  const containerRef = useRef<DOMElement>(null);
 
-  const measure = useCallback(() => {
+  const measure = useLatestCallback(() => {
     if (!contentRef.current || !containerRef.current) return null;
+
     const ch = measureElement(containerRef.current).height;
     const coh = measureElement(contentRef.current).height;
     setDimensions((prev) => {
       if (prev && prev.containerHeight === ch && prev.contentHeight === coh) {
         return prev;
       }
-      return { containerHeight: ch, contentHeight: coh };
+      return { containerHeight: ch, contentHeight: coh } as const;
     });
     return Math.max(0, coh - ch);
-  }, []);
+  });
 
-  const onUp = useCallback(() => {
+  const onUp = useLatestCallback(() => {
     setScroll((s) => {
       measure();
       return Math.max(0, s - 1);
     });
-  }, [measure]);
+  });
 
-  const onDown = useCallback(() => {
+  const onDown = useLatestCallback(() => {
     setScroll((s) => {
       const max = measure() ?? 0;
       return Math.min(s + 1, max);
     });
-  }, [measure]);
+  });
 
   useScrollEvents(onUp, onDown);
 
@@ -156,6 +113,7 @@ export const ScrollBox = ({
         <Box
           position="absolute"
           width="100%"
+          // eslint-disable-next-line @blumintinc/blumint/no-margin-properties
           marginTop={-scroll}
           ref={contentRef}
           flexDirection="column"

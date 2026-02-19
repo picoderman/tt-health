@@ -1,24 +1,24 @@
 import { useStdin } from 'ink';
 import { useEffect } from 'react';
 
-// SGR mouse scroll pattern: ESC[<btn;col;rowM
+/** SGR mouse scroll pattern: ESC[<btn;col;rowM */
 const ESC = String.fromCharCode(0x1b);
 const SGR_MOUSE_RE = new RegExp(`${ESC}\\[<(\\d+);\\d+;\\d+M`, 'g');
 
-const SCROLL_UP_BTN = 64;
 const SCROLL_DOWN_BTN = 65;
+const SCROLL_UP_BTN = 64;
 
-export function useScrollEvents(
+export const useScrollEvents = (
   onUp: () => void,
   onDown: () => void,
   isActive = true,
-): void {
+) => {
   const { stdin } = useStdin();
 
   useEffect(() => {
-    if (!isActive || !stdin) return;
+    if (!isActive) return;
 
-    const handler = (data: Buffer) => {
+    const onStdinData = (data: Buffer) => {
       const str = data.toString('utf-8');
       for (const match of str.matchAll(SGR_MOUSE_RE)) {
         const btn = Number(match[1]);
@@ -27,9 +27,9 @@ export function useScrollEvents(
       }
     };
 
-    stdin.on('data', handler);
+    stdin.on('data', onStdinData);
     return () => {
-      stdin.off('data', handler);
+      stdin.off('data', onStdinData);
     };
   }, [stdin, onUp, onDown, isActive]);
-}
+};

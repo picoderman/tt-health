@@ -1,11 +1,15 @@
 import { Box, Text, useInput } from 'ink';
 import TextInput from 'ink-text-input';
-import { useEffect, useState, type FC } from 'react';
+import { useEffect, useState } from 'react';
+import useLatestCallback from 'use-latest-callback';
 
 import { useAppState } from '../state/useAppState.js';
-import { FileTree } from '../tui-kit/components/FileTree.tsx';
-import { Hint } from '../tui-kit/components/Hint.tsx';
-import { ScrollBox } from '../tui-kit/components/ScrollBox.tsx';
+import {
+  FileTree,
+  type OnFocusEvent,
+} from '../tui-kit/components/FileTree.tsx';
+import { HelpText } from '../tui-kit/components/HelpText.tsx';
+import { ScrollBox } from '../tui-kit/components/ScrollBox/ScrollBox.tsx';
 import { Section } from '../tui-kit/components/Section.tsx';
 import { palette } from '../tui-kit/consts.ts';
 
@@ -19,37 +23,20 @@ import {
 import { StatusBar } from './StatusBar.tsx';
 import { useFileTree } from './useFileTree.ts';
 
-const normalizeCommentPatterns = (patterns: readonly string[]): string[] => {
-  const unique: string[] = [];
-
-  for (const pattern of patterns) {
-    const normalizedPattern = pattern.trim();
-    if (!normalizedPattern || unique.includes(normalizedPattern)) {
-      continue;
-    }
-    unique.push(normalizedPattern);
-  }
-
-  return unique;
-};
-
-const parseCommentPatterns = (rawValue: string): string[] =>
-  normalizeCommentPatterns(rawValue.split(/[,\n]/g));
-
-const areEqual = (left: readonly string[], right: readonly string[]): boolean =>
-  left.length === right.length &&
-  left.every((item, index) => item === right[index]);
-
 const TREE_SECTION_FOCUS_OFFSET = 2;
 
-interface AppProps {
+type AppProps = {
   dir: string;
-}
+};
 
-export const App: FC<AppProps> = ({ dir }) => {
+const defaultCommentPatterns = [...DEFAULT_COMMENT_PATTERNS].slice(
+  0,
+  MAX_COMMENT_PATTERNS,
+);
+export const App = ({ dir }: AppProps) => {
   const [commentPatterns, setCommentPatterns] = useAppState<string[]>(
     COMMENT_PATTERNS_STATE_KEY,
-    [...DEFAULT_COMMENT_PATTERNS].slice(0, MAX_COMMENT_PATTERNS),
+    defaultCommentPatterns,
   );
   const [isEditingPatterns, setIsEditingPatterns] = useState(false);
   const [commentPatternsInput, setCommentPatternsInput] = useState(
@@ -66,16 +53,21 @@ export const App: FC<AppProps> = ({ dir }) => {
       MAX_COMMENT_PATTERNS,
     );
 
-    if (!areEqual(commentPatterns, clampedPatterns))
+    if (
+      !computeArePatternsEqual({
+        left: commentPatterns,
+        right: clampedPatterns,
+      })
+    )
       setCommentPatterns(clampedPatterns);
   }, [commentPatterns, setCommentPatterns]);
 
-  const { selectedFile, handleSelect, getLabels, sortEntries } = useFileTree(
+  const { selectedFile, onSelect, getLabels, sortEntries } = useFileTree(
     dir,
     commentPatterns,
   );
 
-  const saveCommentPatterns = (rawValue: string) => {
+  const saveCommentPatterns = useLatestCallback((rawValue: string) => {
     const parsedPatterns = parseCommentPatterns(rawValue);
     if (parsedPatterns.length === 0) {
       setCommentPatternError('Add at least one marker.');
@@ -83,14 +75,15 @@ export const App: FC<AppProps> = ({ dir }) => {
     }
 
     if (parsedPatterns.length > MAX_COMMENT_PATTERNS) {
-      setCommentPatternError(`Max ${MAX_COMMENT_PATTERNS} markers.`);
+      setCommentPatternError(`Max ${MAX_COMMENT_PATTERNS.toString()} markers.`);
       return;
     }
 
+    // DO: It's not calling rerender of the tree 🤔
     setCommentPatterns(parsedPatterns);
     setCommentPatternError(null);
     setIsEditingPatterns(false);
-  };
+  });
 
   useInput((input, key) => {
     if (isEditingPatterns) {
@@ -111,6 +104,15 @@ export const App: FC<AppProps> = ({ dir }) => {
     }
   });
 
+  const onFocus = useLatestCallback(({ index, total }: OnFocusEvent) => {
+    setTreeFocus((prev) => {
+      if (prev.index === index && prev.total === total) {
+        return prev;
+      }
+      return { index, total } as const;
+    });
+  });
+
   return (
     <ScrollBox focusRow={treeFocus.index + TREE_SECTION_FOCUS_OFFSET}>
       <Box flexDirection="column" height="100%">
@@ -120,26 +122,19 @@ export const App: FC<AppProps> = ({ dir }) => {
               <FileTree
                 rootPath={dir}
                 isActive={!isEditingPatterns}
-                dimNonActiveDepth={true}
-                onFocus={(_, index, total) => {
-                  setTreeFocus((prev) => {
-                    if (prev.index === index && prev.total === total) {
-                      return prev;
-                    }
-                    return { index, total };
-                  });
-                }}
-                onSelect={handleSelect}
-                showHidden={false}
+                isDimNonActiveDepth={true}
+                onFocus={onFocus}
+                onSelect={onSelect}
+                isShowHidden={false}
                 getLabels={getLabels}
                 sortEntries={sortEntries}
-                fileExtensions={[...FILE_EXTENSIONS]}
-                excludeDirs={[...EXCLUDED_DIRS]}
+                fileExtensions={FILE_EXTENSIONS}
+                excludeDirs={EXCLUDED_DIRS}
               />
             </Section>
 
             {isEditingPatterns && (
-              <Box marginTop={1} flexDirection="column">
+              <Box paddingTop={1} flexDirection="column">
                 <Text color={palette.textDim}>
                   Comment markers (comma/newline separated, max 4):
                 </Text>
@@ -156,7 +151,7 @@ export const App: FC<AppProps> = ({ dir }) => {
                   <Text color={palette.error}>{commentPatternError}</Text>
                 )}
 
-                <Hint text="Enter save | Esc cancel" />
+                <HelpText text="Enter save | Esc cancel" />
               </Box>
             )}
           </Box>
@@ -171,3 +166,30 @@ export const App: FC<AppProps> = ({ dir }) => {
     </ScrollBox>
   );
 };
+
+const parseCommentPatterns = (rawValue: string) =>
+  normalizeCommentPatterns(rawValue.split(/[,\n]/g));
+
+const normalizeCommentPatterns = (patterns: readonly string[]) => {
+  const unique: string[] = [];
+
+  for (const pattern of patterns) {
+    const normalizedPattern = pattern.trim();
+    if (!normalizedPattern || unique.includes(normalizedPattern)) {
+      continue;
+    }
+    unique.push(normalizedPattern);
+  }
+
+  return unique;
+};
+
+const computeArePatternsEqual = ({
+  left,
+  right,
+}: {
+  left: readonly string[];
+  right: readonly string[];
+}) =>
+  left.length === right.length &&
+  left.every((item, index) => item === right[index]);

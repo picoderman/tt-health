@@ -6,26 +6,26 @@ import { render } from 'ink';
 
 import { StandaloneApp } from './app/StandaloneApp.tsx';
 
-let restored = false;
+let isRestored = false;
 
-function restoreTerminal() {
-  if (restored) return;
-  restored = true;
+const restoreTerminal = () => {
+  if (isRestored) return;
+  isRestored = true;
 
   if (process.stdin.isTTY) {
     process.stdin.setRawMode(false);
   }
   process.stdout.write('\x1b[?1006l\x1b[?1000l\x1b[?25h\x1b[?1049l');
-}
+};
 
-function resolveTargetDir(): string {
+const resolveTargetDir = () => {
   const arg = process.argv[2];
   if (!arg) {
     return process.cwd();
   }
 
   return resolve(process.cwd(), arg);
-}
+};
 
 process.on('SIGINT', () => {
   restoreTerminal();

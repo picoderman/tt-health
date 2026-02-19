@@ -2,17 +2,23 @@ import { readdirSync, statSync } from 'node:fs';
 import { join, basename, dirname, resolve } from 'node:path';
 
 import { Box, Text, useInput } from 'ink';
-import { useState, useEffect, useCallback, useMemo, type FC } from 'react';
+import { useState, useEffect, useMemo, type FC } from 'react';
+import useLatestCallback from 'use-latest-callback';
 
 import { chars, palette } from '../consts.ts';
+const DEFAULT_IS_ACTIVE = true as const;
 
-export interface FileTreeLabel {
+const DEFAULT_DIM_NON_ACTIVE_DEPTH = false as const;
+const DEFAULT_SHOW_HIDDEN = false as const;
+const DEFAULT_MAX_DEPTH = 10;
+
+export type FileTreeLabel = {
   text: string;
   color: string;
   placement?: 'inline' | 'countColumn';
-}
+};
 
-export interface FileTreeNode {
+export type FileTreeNode = {
   id: string;
   name: string;
   path: string;
@@ -21,52 +27,64 @@ export interface FileTreeNode {
   isLast: boolean;
   parentIsLast: boolean[];
   labels?: FileTreeLabel[];
-}
+};
 
-export interface FileTreeSortEntry {
+export type FileTreeSortEntry = {
   name: string;
   path: string;
   isDirectory: boolean;
-}
+};
 
-export interface FileTreeProps {
+export type OnFocusEvent = {
+  node: FileTreeNode;
+  index: number;
+  total: number;
+};
+
+export type FileTreeProps = {
   rootPath: string;
   isActive?: boolean;
-  dimNonActiveDepth?: boolean;
+  isDimNonActiveDepth?: boolean;
   onSelect?: (node: FileTreeNode) => void;
-  onFocus?: (node: FileTreeNode, index: number, total: number) => void;
-  showHidden?: boolean;
+  onFocus?: (event: OnFocusEvent) => void;
+  isShowHidden?: boolean;
   maxDepth?: number;
   getLabels?: (node: FileTreeNode) => FileTreeLabel[];
-  fileExtensions?: string[]; // Filter by file extensions, e.g. ['js', 'ts', 'jsx', 'tsx']
-  excludeDirs?: string[]; // Exclude directories by name, e.g. ['node_modules']
-  sortEntries?: (left: FileTreeSortEntry, right: FileTreeSortEntry) => number;
-}
+  /** Filter by file extensions, e.g. ['js', 'ts', 'jsx', 'tsx'] */
+  fileExtensions?: string[];
+  /** Exclude directories by name, e.g. ['node_modules'] */
+  excludeDirs?: string[];
+  sortEntries?: (params: {
+    left: FileTreeSortEntry;
+    right: FileTreeSortEntry;
+  }) => number;
+};
 
-interface ExpandedState {
+type ExpandedState = {
   [path: string]: boolean;
-}
+};
 
 const COMMENT_COUNT_COLUMN_START = 62;
 const MIN_COMMENT_LEADER_LENGTH = 4;
 
-export const FileTree: FC<FileTreeProps> = ({
+export const FileTree = ({
   rootPath,
-  isActive = true,
-  dimNonActiveDepth = false,
+  isActive = DEFAULT_IS_ACTIVE,
+  isDimNonActiveDepth = DEFAULT_DIM_NON_ACTIVE_DEPTH,
   onSelect,
   onFocus,
-  showHidden = false,
-  maxDepth = 10,
+  isShowHidden = DEFAULT_SHOW_HIDDEN,
+  maxDepth = DEFAULT_MAX_DEPTH,
   getLabels,
   fileExtensions,
   excludeDirs,
   sortEntries,
-}) => {
+}: FileTreeProps) => {
   const canonicalRootPath = resolve(rootPath);
-  const [expanded, setExpanded] = useState<ExpandedState>({
-    [canonicalRootPath]: true,
-  });
+  const defaultExpandedState = useMemo(() => {
+    return { [canonicalRootPath]: true } as const;
+  }, [canonicalRootPath]);
+  const [expanded, setExpanded] = useState<ExpandedState>(defaultExpandedState);
   const [selectedIndex, setSelectedIndex] = useState(0);
   const [error, setError] = useState<string | null>(null);
 
@@ -84,7 +102,7 @@ export const FileTree: FC<FileTreeProps> = ({
       try {
         const entries = readdirSync(dirPath, { withFileTypes: true });
         const filtered = entries
-          .filter((e) => showHidden || !e.name.startsWith('.'))
+          .filter((e) => isShowHidden || !e.name.startsWith('.'))
           .filter((e) => {
             // Exclude specified directories
             if (e.isDirectory() && excludeDirs?.includes(e.name)) {
@@ -118,7 +136,7 @@ export const FileTree: FC<FileTreeProps> = ({
             path: join(dirPath, b.name),
             isDirectory: b.isDirectory(),
           };
-          const customSortResult = sortEntries?.(left, right) ?? 0;
+          const customSortResult = sortEntries?.({ left, right }) ?? 0;
           if (customSortResult !== 0) {
             return customSortResult;
           }
@@ -166,6 +184,8 @@ export const FileTree: FC<FileTreeProps> = ({
           isLast: true,
           parentIsLast: [],
         };
+
+        // DO: In case of labels changed, it will not rerender new values
         if (getLabels) {
           rootNode.labels = getLabels(rootNode);
         }
@@ -176,6 +196,7 @@ export const FileTree: FC<FileTreeProps> = ({
         }
       }
     } catch (error) {
+      // DO: Collect logs into a file, because it's a TUI app and we can't show logs in console
       console.error(error);
     }
 
@@ -183,7 +204,7 @@ export const FileTree: FC<FileTreeProps> = ({
   }, [
     canonicalRootPath,
     expanded,
-    showHidden,
+    isShowHidden,
     maxDepth,
     getLabels,
     fileExtensions,
@@ -195,7 +216,7 @@ export const FileTree: FC<FileTreeProps> = ({
   if (prevRootPath !== canonicalRootPath) {
     setPrevRootPath(canonicalRootPath);
     setSelectedIndex(0);
-    setExpanded({ [canonicalRootPath]: true });
+    setExpanded(defaultExpandedState);
     setError(null);
   }
 
@@ -212,17 +233,21 @@ export const FileTree: FC<FileTreeProps> = ({
     if (!currentNode) {
       return;
     }
-    onFocus?.(currentNode, selectedIndex, visibleNodes.length);
+    onFocus?.({
+      node: currentNode,
+      index: selectedIndex,
+      total: visibleNodes.length,
+    });
   }, [onFocus, selectedIndex, visibleNodes]);
 
-  const toggleExpand = useCallback((path: string) => {
+  const toggleExpand = useLatestCallback((path: string) => {
     setExpanded((prev) => ({
       ...prev,
       [path]: !prev[path],
     }));
-  }, []);
+  });
 
-  const collapseSubtree = useCallback((path: string) => {
+  const collapseSubtree = useLatestCallback((path: string) => {
     setExpanded((prev) => {
       const next = { ...prev };
       const childPrefix = `${path}/`;
@@ -235,17 +260,12 @@ export const FileTree: FC<FileTreeProps> = ({
 
       return next;
     });
-  }, []);
+  });
 
-  const findParentIndex = useCallback(
-    (node: FileTreeNode): number => {
-      const parentPath = dirname(node.path);
-      return visibleNodes.findIndex(
-        (candidate) => candidate.path === parentPath,
-      );
-    },
-    [visibleNodes],
-  );
+  const findParentIndex = useLatestCallback((node: FileTreeNode) => {
+    const parentPath = dirname(node.path);
+    return visibleNodes.findIndex((candidate) => candidate.path === parentPath);
+  });
 
   useInput(
     (_, key) => {
@@ -253,9 +273,9 @@ export const FileTree: FC<FileTreeProps> = ({
 
       // Navigation
       if (key.downArrow) {
-        setSelectedIndex((prev) => Math.min(prev + 1, visibleNodes.length - 1));
+        setSelectedIndex(Math.min(selectedIndex + 1, visibleNodes.length - 1));
       } else if (key.upArrow) {
-        setSelectedIndex((prev) => Math.max(prev - 1, 0));
+        setSelectedIndex(Math.max(selectedIndex - 1, 0));
       } else if (key.rightArrow && currentNode?.isDirectory) {
         if (!expanded[currentNode.path]) {
           toggleExpand(currentNode.path);
@@ -284,6 +304,40 @@ export const FileTree: FC<FileTreeProps> = ({
     { isActive: isActive && visibleNodes.length > 0 },
   );
 
+  const focusedNode = visibleNodes[selectedIndex];
+  const focusedParentPath =
+    focusedNode && focusedNode.depth > 0 ? dirname(focusedNode.path) : null;
+
+  const nodesContent = useMemo(() => {
+    return visibleNodes.map((node, index) => {
+      const isSelected = index === selectedIndex;
+      const isExpanded = expanded[node.path] ?? false;
+      const isInActiveLayer = focusedNode
+        ? focusedNode.depth === 0
+          ? node.path === focusedNode.path
+          : dirname(node.path) === focusedParentPath
+        : false;
+
+      return (
+        <FileTreeRow
+          key={node.id}
+          node={node}
+          isSelected={isSelected}
+          isExpanded={isExpanded}
+          isInActiveLayer={isInActiveLayer}
+          isDimNonActiveDepth={isDimNonActiveDepth}
+        />
+      );
+    });
+  }, [
+    expanded,
+    focusedNode,
+    focusedParentPath,
+    isDimNonActiveDepth,
+    selectedIndex,
+    visibleNodes,
+  ]);
+
   if (error) {
     return (
       <Box>
@@ -300,53 +354,26 @@ export const FileTree: FC<FileTreeProps> = ({
     );
   }
 
-  const focusedNode = visibleNodes[selectedIndex];
-  const focusedParentPath =
-    focusedNode && focusedNode.depth > 0 ? dirname(focusedNode.path) : null;
-
-  return (
-    <Box flexDirection="column">
-      {visibleNodes.map((node, index) => {
-        const isSelected = index === selectedIndex;
-        const isExpanded = expanded[node.path] ?? false;
-        const isInActiveLayer = focusedNode
-          ? focusedNode.depth === 0
-            ? node.path === focusedNode.path
-            : dirname(node.path) === focusedParentPath
-          : false;
-
-        return (
-          <FileTreeRow
-            key={node.id}
-            node={node}
-            isSelected={isSelected}
-            isExpanded={isExpanded}
-            isInActiveLayer={isInActiveLayer}
-            dimNonActiveDepth={dimNonActiveDepth}
-          />
-        );
-      })}
-    </Box>
-  );
+  return <Box flexDirection="column">{nodesContent}</Box>;
 };
 
-interface FileTreeRowProps {
+type FileTreeRowProps = {
   node: FileTreeNode;
   isSelected: boolean;
   isExpanded: boolean;
   isInActiveLayer: boolean;
-  dimNonActiveDepth: boolean;
-}
+  isDimNonActiveDepth: boolean;
+};
 
 const FileTreeRow: FC<FileTreeRowProps> = ({
   node,
   isSelected,
   isExpanded,
   isInActiveLayer,
-  dimNonActiveDepth,
+  isDimNonActiveDepth,
 }) => {
   // Build prefix for tree lines
-  const buildPrefix = (): string => {
+  const buildPrefix = useLatestCallback(() => {
     if (node.depth === 0) return '';
 
     let prefix = '';
@@ -362,13 +389,19 @@ const FileTreeRow: FC<FileTreeRowProps> = ({
       : `${chars.treeBranch}${chars.treeHorizontal}`;
 
     return prefix;
-  };
+  });
 
   const prefix = buildPrefix();
-  const inlineLabels =
-    node.labels?.filter((label) => label.placement !== 'countColumn') ?? [];
-  const countColumnLabels =
-    node.labels?.filter((label) => label.placement === 'countColumn') ?? [];
+  const inlineLabels = useMemo(() => {
+    return (
+      node.labels?.filter((label) => label.placement !== 'countColumn') ?? []
+    );
+  }, [node.labels]);
+  const countColumnLabels = useMemo(() => {
+    return (
+      node.labels?.filter((label) => label.placement === 'countColumn') ?? []
+    );
+  }, [node.labels]);
 
   // Icon based on type
   const icon = node.isDirectory
@@ -377,24 +410,24 @@ const FileTreeRow: FC<FileTreeRowProps> = ({
       : chars.folderClosed
     : chars.file;
 
-  const highlightActiveLayer = dimNonActiveDepth && isInActiveLayer;
+  const isHighlightActiveLayer = isDimNonActiveDepth && isInActiveLayer;
   const isMonoMode = palette.colorMode === 'mono';
-  const isColoredActiveLayer = highlightActiveLayer && !isMonoMode;
+  const isColoredActiveLayer = isHighlightActiveLayer && !isMonoMode;
 
-  const marker = isSelected ? '>' : highlightActiveLayer ? '•' : ' ';
+  const marker = isSelected ? '>' : isHighlightActiveLayer ? '•' : ' ';
   const markerColor = isSelected
     ? palette.accent
     : isColoredActiveLayer
       ? palette.info
       : palette.text;
-  const markerBold = isSelected || (highlightActiveLayer && isMonoMode);
+  const markerBold = isSelected || (isHighlightActiveLayer && isMonoMode);
 
   const rowColor = isSelected
     ? palette.accent
     : isColoredActiveLayer
       ? palette.info
       : palette.text;
-  const rowBold = isSelected || (highlightActiveLayer && isMonoMode);
+  const rowBold = isSelected || (isHighlightActiveLayer && isMonoMode);
 
   const iconColor = node.isDirectory
     ? isSelected
@@ -402,10 +435,12 @@ const FileTreeRow: FC<FileTreeRowProps> = ({
       : rowColor
     : rowColor;
 
-  const inlineLabelTextLength = inlineLabels.reduce(
-    (total, label) => total + label.text.length + 3,
-    0,
-  );
+  const inlineLabelTextLength = useMemo(() => {
+    return inlineLabels.reduce(
+      (total, label) => total + label.text.length + 3,
+      0,
+    );
+  }, [inlineLabels]);
 
   const rowContentLength =
     prefix.length +
@@ -424,10 +459,32 @@ const FileTreeRow: FC<FileTreeRowProps> = ({
         );
   const leader = leaderLength > 0 ? '·'.repeat(leaderLength) : '';
 
+  const renderedInlineLabels = useMemo(() => {
+    return inlineLabels.map((label, i) => {
+      const labelColor = isMonoMode ? palette.text : label.color;
+      return (
+        <Text key={`inline-${i.toString()}`} color={labelColor}>
+          {` [${label.text}]`}
+        </Text>
+      );
+    });
+  }, [inlineLabels, isMonoMode]);
+
+  const renderedCountColumnLabels = useMemo(() => {
+    return countColumnLabels.map((label, i) => {
+      const labelColor = isMonoMode ? palette.text : label.color;
+      return (
+        <Text key={`column-${i.toString()}`} color={labelColor}>
+          {i === 0 ? '' : ' '}[{label.text}]
+        </Text>
+      );
+    });
+  }, [countColumnLabels, isMonoMode]);
+
   return (
     <Box flexDirection="row">
       <Text color={markerColor} bold={markerBold}>
-        {marker}{' '}
+        {`${marker} `}
       </Text>
 
       <Text color={rowColor}>{prefix}</Text>
@@ -440,31 +497,15 @@ const FileTreeRow: FC<FileTreeRowProps> = ({
 
       {node.isDirectory && <Text color={rowColor}>/</Text>}
 
-      {inlineLabels.map((label, i) => {
-        const labelColor = isMonoMode ? palette.text : label.color;
-        return (
-          <Text key={`inline-${i}`} color={labelColor}>
-            {' '}
-            [{label.text}]
-          </Text>
-        );
-      })}
+      {renderedInlineLabels}
 
       {countColumnLabels.length > 0 && (
         <Text color={rowColor} bold={rowBold}>
-          {' '}
-          {leader}{' '}
+          {` ${leader} `}
         </Text>
       )}
 
-      {countColumnLabels.map((label, i) => {
-        const labelColor = isMonoMode ? palette.text : label.color;
-        return (
-          <Text key={`column-${i}`} color={labelColor}>
-            {i === 0 ? '' : ' '}[{label.text}]
-          </Text>
-        );
-      })}
+      {renderedCountColumnLabels}
     </Box>
   );
 };

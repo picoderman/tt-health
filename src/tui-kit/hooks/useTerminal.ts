@@ -1,43 +1,35 @@
 import { useStdout, useApp } from 'ink';
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect } from 'react';
+import useLatestCallback from 'use-latest-callback';
 
-export interface TerminalDimensions {
-  width: number;
-  height: number;
-}
-
-/**
- * Hook for getting terminal dimensions with auto-resize.
- */
-export function useTerminalSize(): TerminalDimensions {
+export const useTerminalSize = () => {
   const { stdout } = useStdout();
-  const [dimensions, setDimensions] = useState<TerminalDimensions>({
-    width: stdout?.columns ?? 80,
-    height: stdout?.rows ?? 24,
+  const [dimensions, setDimensions] = useState({
+    width: stdout.columns,
+    height: stdout.rows,
   });
 
   useEffect(() => {
-    const handleResize = () => {
+    const resize = () => {
       setDimensions({
-        width: stdout?.columns ?? 80,
-        height: stdout?.rows ?? 24,
+        width: stdout.columns,
+        height: stdout.rows,
       });
     };
 
-    stdout?.on('resize', handleResize);
+    stdout.on('resize', resize);
     return () => {
-      stdout?.off('resize', handleResize);
+      stdout.off('resize', resize);
     };
-  }, [stdout]);
+  }, [stdout.columns, stdout.rows, stdout]);
 
   return dimensions;
-}
+};
 
-/**
- * Hook for app lifecycle control.
- */
-export function useAppExit(): () => void {
+export const useAppExit = () => {
   const { exit } = useApp();
 
-  return useCallback(() => exit(), [exit]);
-}
+  return useLatestCallback(() => {
+    exit();
+  });
+};

@@ -13,9 +13,9 @@ import { useAppExit, useTerminalSize } from '../tui-kit/hooks/useTerminal.ts';
 import { App as FsApp } from './App.tsx';
 import { APP_THEME_STATE_KEY } from './consts.ts';
 
-interface StandaloneAppProps {
+type StandaloneAppProps = {
   dir: string;
-}
+};
 
 // DO: Merge with App. Added as a replacement of TT platform wrapper
 export const StandaloneApp: FC<StandaloneAppProps> = ({ dir }) => {
@@ -28,13 +28,14 @@ export const StandaloneApp: FC<StandaloneAppProps> = ({ dir }) => {
   useInput((input, key) => {
     const normalizedInput = input.toLowerCase();
 
+    // DO: Disable global keys in case of input focus
     if (normalizedInput === 'q' || (key.ctrl && normalizedInput === 'c')) {
       exit();
       return;
     }
 
     if (normalizedInput === 't') {
-      setTheme((currentTheme) => toggleTheme(currentTheme));
+      setTheme(toggleTheme(theme));
     }
   });
 

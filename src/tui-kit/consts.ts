@@ -7,7 +7,7 @@ export type TerminalColorCapability =
 export type ColorMode = 'auto' | 'ansi' | 'mono';
 type AppliedColorMode = 'truecolor' | 'ansi' | 'mono';
 
-export interface AppPalette {
+export type AppPalette = {
   colorMode: AppliedColorMode;
   terminalCapability: TerminalColorCapability;
   accent: string;
@@ -21,7 +21,7 @@ export interface AppPalette {
   success: string;
   error: string;
   info: string;
-}
+};
 
 type ThemeProfile = Omit<AppPalette, 'colorMode' | 'terminalCapability'>;
 
@@ -112,43 +112,21 @@ const monoProfiles: Record<AppTheme, ThemeProfile> = {
   },
 };
 
-const parseColorMode = (value: string | undefined): ColorMode => {
-  const normalized = value?.trim().toLowerCase();
-  if (normalized === 'ansi' || normalized === 'mono' || normalized === 'auto') {
-    return normalized;
-  }
-  return 'auto';
+export const applyTheme = (theme: AppTheme) => {
+  const terminalCapability = detectTerminalColorCapability();
+  const colorMode = resolveColorMode();
+  const appliedMode = resolveAppliedColorMode(colorMode, terminalCapability);
+  Object.assign(palette, {
+    colorMode: appliedMode,
+    terminalCapability,
+    ...deriveColorsProfile(theme, appliedMode),
+  });
 };
-
-export const detectTerminalColorCapability = (): TerminalColorCapability => {
-  if (process.env.NO_COLOR) {
-    return 'none';
-  }
-
-  if (!process.stdout.isTTY) {
-    return 'none';
-  }
-
-  const depth = process.stdout.getColorDepth?.() ?? 1;
-  if (depth >= 24) {
-    return 'truecolor';
-  }
-  if (depth >= 8) {
-    return 'ansi256';
-  }
-  if (depth >= 4) {
-    return 'basic16';
-  }
-  return 'none';
-};
-
-export const resolveColorMode = (): ColorMode =>
-  parseColorMode(process.env.TT_HEALTH_COLOR_MODE);
 
 const resolveAppliedColorMode = (
   colorMode: ColorMode,
   capability: TerminalColorCapability,
-): AppliedColorMode => {
+) => {
   if (colorMode === 'mono') {
     return 'mono';
   }
@@ -165,10 +143,46 @@ const resolveAppliedColorMode = (
   return 'ansi';
 };
 
-const getProfile = (
+export const resolveColorMode = () =>
+  parseColorMode(process.env.TT_HEALTH_COLOR_MODE);
+
+const parseColorMode = (value: string | undefined) => {
+  const normalized = value?.trim().toLowerCase();
+  if (normalized === 'ansi' || normalized === 'mono' || normalized === 'auto') {
+    return normalized;
+  }
+  return 'auto';
+};
+
+export const detectTerminalColorCapability = () => {
+  if (process.env.NO_COLOR) {
+    return 'none';
+  }
+
+  if (!process.stdout.isTTY) {
+    return 'none';
+  }
+
+  const depth = process.stdout.getColorDepth();
+  if (depth >= 24) {
+    return 'truecolor';
+  }
+  if (depth >= 8) {
+    return 'ansi256';
+  }
+  if (depth >= 4) {
+    return 'basic16';
+  }
+  return 'none';
+};
+
+export const toggleTheme = (theme: AppTheme) =>
+  theme === 'dark' ? 'light' : 'dark';
+
+const deriveColorsProfile = (
   theme: AppTheme,
   appliedMode: AppliedColorMode,
-): ThemeProfile => {
+) => {
   if (appliedMode === 'mono') {
     return monoProfiles[theme];
   }
@@ -177,32 +191,6 @@ const getProfile = (
   }
   return truecolorProfiles[theme];
 };
-
-const initialTerminalCapability = detectTerminalColorCapability();
-const initialAppliedColorMode = resolveAppliedColorMode(
-  resolveColorMode(),
-  initialTerminalCapability,
-);
-
-export const palette: AppPalette = {
-  colorMode: initialAppliedColorMode,
-  terminalCapability: initialTerminalCapability,
-  ...getProfile('dark', initialAppliedColorMode),
-};
-
-export const applyTheme = (theme: AppTheme): void => {
-  const terminalCapability = detectTerminalColorCapability();
-  const colorMode = resolveColorMode();
-  const appliedMode = resolveAppliedColorMode(colorMode, terminalCapability);
-  Object.assign(palette, {
-    colorMode: appliedMode,
-    terminalCapability,
-    ...getProfile(theme, appliedMode),
-  });
-};
-
-export const toggleTheme = (theme: AppTheme): AppTheme =>
-  theme === 'dark' ? 'light' : 'dark';
 
 export const chars = {
   treeVertical: '│',
@@ -213,3 +201,15 @@ export const chars = {
   folderClosed: '>',
   file: '·',
 } as const;
+
+const initialTerminalCapability = detectTerminalColorCapability();
+const initialAppliedColorMode = resolveAppliedColorMode(
+  resolveColorMode(),
+  initialTerminalCapability,
+);
+
+export const palette: AppPalette = {
+  colorMode: initialAppliedColorMode,
+  terminalCapability: initialTerminalCapability,
+  ...deriveColorsProfile('dark', initialAppliedColorMode),
+};
