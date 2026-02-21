@@ -197,6 +197,7 @@ export const FileTree = ({
       }
     } catch (error) {
       // DO: Collect logs into a file, because it's a TUI app and we can't show logs in console
+      // eslint-disable-next-line @blumintinc/blumint/no-console-error
       console.error(error);
     }
 
