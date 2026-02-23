@@ -1,5 +1,4 @@
 import { Box, Text, useInput } from 'ink';
-import TextInput from 'ink-text-input';
 import { useEffect, useState } from 'react';
 import useLatestCallback from 'use-latest-callback';
 
@@ -9,9 +8,11 @@ import {
   type OnFocusEvent,
 } from '../tui-kit/components/FileTree.tsx';
 import { HelpText } from '../tui-kit/components/HelpText.tsx';
+import { ManagedTextInput } from '../tui-kit/components/ManagedTextInput.tsx';
 import { ScrollBox } from '../tui-kit/components/ScrollBox/ScrollBox.tsx';
 import { Section } from '../tui-kit/components/Section.tsx';
 import { palette } from '../tui-kit/consts.ts';
+import { useAreGlobalShortcutsLocked } from '../tui-kit/hooks/useGlobalShortcutLock.ts';
 
 import {
   COMMENT_PATTERNS_STATE_KEY,
@@ -46,6 +47,7 @@ export const App = ({ dir }: AppProps) => {
     null,
   );
   const [treeFocus, setTreeFocus] = useState({ index: 0, total: 0 });
+  const isGlobalShortcutLocked = useAreGlobalShortcutsLocked();
 
   useEffect(() => {
     const clampedPatterns = normalizeCommentPatterns(commentPatterns).slice(
@@ -95,6 +97,10 @@ export const App = ({ dir }: AppProps) => {
       return;
     }
 
+    if (isGlobalShortcutLocked) {
+      return;
+    }
+
     const normalizedInput = input.toLowerCase();
 
     if (normalizedInput === 'c') {
@@ -139,7 +145,7 @@ export const App = ({ dir }: AppProps) => {
                   Comment markers (comma/newline separated, max 4):
                 </Text>
 
-                <TextInput
+                <ManagedTextInput
                   value={commentPatternsInput}
                   onChange={setCommentPatternsInput}
                   onSubmit={saveCommentPatterns}

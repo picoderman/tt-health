@@ -6,6 +6,7 @@ import { useState, useEffect, useMemo, type FC } from 'react';
 import useLatestCallback from 'use-latest-callback';
 
 import { chars, palette } from '../consts.ts';
+import { useAreGlobalShortcutsLocked } from '../hooks/useGlobalShortcutLock.ts';
 const DEFAULT_IS_ACTIVE = true as const;
 
 const DEFAULT_DIM_NON_ACTIVE_DEPTH = false as const;
@@ -87,6 +88,7 @@ export const FileTree = ({
   const [expanded, setExpanded] = useState<ExpandedState>(defaultExpandedState);
   const [selectedIndex, setSelectedIndex] = useState(0);
   const [error, setError] = useState<string | null>(null);
+  const isGlobalShortcutLocked = useAreGlobalShortcutsLocked();
 
   // Build flat list of visible nodes
   const visibleNodes = useMemo(() => {
@@ -302,7 +304,10 @@ export const FileTree = ({
         }
       }
     },
-    { isActive: isActive && visibleNodes.length > 0 },
+    {
+      // DO: Create useAppInput proxy to replace useInput in the whole app
+      isActive: isActive && visibleNodes.length > 0 && !isGlobalShortcutLocked,
+    },
   );
 
   const focusedNode = visibleNodes[selectedIndex];

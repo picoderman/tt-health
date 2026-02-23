@@ -8,6 +8,7 @@ import {
   toggleTheme,
   type AppTheme,
 } from '../tui-kit/consts.ts';
+import { useAreGlobalShortcutsLocked } from '../tui-kit/hooks/useGlobalShortcutLock.ts';
 import { useAppExit, useTerminalSize } from '../tui-kit/hooks/useTerminal.ts';
 
 import { App as FsApp } from './App.tsx';
@@ -22,14 +23,23 @@ export const StandaloneApp: FC<StandaloneAppProps> = ({ dir }) => {
   const { width, height } = useTerminalSize();
   const exit = useAppExit();
   const [theme, setTheme] = useAppState<AppTheme>(APP_THEME_STATE_KEY, 'dark');
+  const isGlobalShortcutLocked = useAreGlobalShortcutsLocked();
 
   applyTheme(theme);
 
   useInput((input, key) => {
     const normalizedInput = input.toLowerCase();
 
-    // DO: Disable global keys in case of input focus
-    if (normalizedInput === 'q' || (key.ctrl && normalizedInput === 'c')) {
+    if (key.ctrl && normalizedInput === 'c') {
+      exit();
+      return;
+    }
+
+    if (isGlobalShortcutLocked) {
+      return;
+    }
+
+    if (normalizedInput === 'q') {
       exit();
       return;
     }
