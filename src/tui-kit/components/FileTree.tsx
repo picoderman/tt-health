@@ -328,6 +328,7 @@ export const FileTree = ({
         <FileTreeRow
           key={node.id}
           node={node}
+          isActive={isActive}
           isSelected={isSelected}
           isExpanded={isExpanded}
           isInActiveLayer={isInActiveLayer}
@@ -339,6 +340,7 @@ export const FileTree = ({
     expanded,
     focusedNode,
     focusedParentPath,
+    isActive,
     isDimNonActiveDepth,
     selectedIndex,
     visibleNodes,
@@ -365,6 +367,7 @@ export const FileTree = ({
 
 type FileTreeRowProps = {
   node: FileTreeNode;
+  isActive: boolean;
   isSelected: boolean;
   isExpanded: boolean;
   isInActiveLayer: boolean;
@@ -373,6 +376,7 @@ type FileTreeRowProps = {
 
 const FileTreeRow: FC<FileTreeRowProps> = ({
   node,
+  isActive,
   isSelected,
   isExpanded,
   isInActiveLayer,
@@ -419,27 +423,22 @@ const FileTreeRow: FC<FileTreeRowProps> = ({
   const isHighlightActiveLayer = isDimNonActiveDepth && isInActiveLayer;
   const isMonoMode = palette.colorMode === 'mono';
   const isColoredActiveLayer = isHighlightActiveLayer && !isMonoMode;
+  const isFocused = isActive && isSelected;
 
   const marker = isSelected ? '>' : isHighlightActiveLayer ? '•' : ' ';
-  const markerColor = isSelected
-    ? palette.accent
+  const markerColor = isFocused
+    ? palette.inverseText
     : isColoredActiveLayer
       ? palette.info
       : palette.text;
   const markerBold = isSelected || (isHighlightActiveLayer && isMonoMode);
 
-  const rowColor = isSelected
-    ? palette.accent
+  const rowColor = isFocused
+    ? palette.inverseText
     : isColoredActiveLayer
       ? palette.info
       : palette.text;
   const rowBold = isSelected || (isHighlightActiveLayer && isMonoMode);
-
-  const iconColor = node.isDirectory
-    ? isSelected
-      ? palette.accentBright
-      : rowColor
-    : rowColor;
 
   const inlineLabelTextLength = useMemo(() => {
     return inlineLabels.reduce(
@@ -467,35 +466,46 @@ const FileTreeRow: FC<FileTreeRowProps> = ({
 
   const renderedInlineLabels = useMemo(() => {
     return inlineLabels.map((label, i) => {
-      const labelColor = isMonoMode ? palette.text : label.color;
+      const labelColor = isFocused
+        ? palette.inverseText
+        : isMonoMode
+          ? palette.text
+          : label.color;
       return (
         <Text key={`inline-${i.toString()}`} color={labelColor}>
           {` [${label.text}]`}
         </Text>
       );
     });
-  }, [inlineLabels, isMonoMode]);
+  }, [inlineLabels, isFocused, isMonoMode]);
 
   const renderedCountColumnLabels = useMemo(() => {
     return countColumnLabels.map((label, i) => {
-      const labelColor = isMonoMode ? palette.text : label.color;
+      const labelColor = isFocused
+        ? palette.inverseText
+        : isMonoMode
+          ? palette.text
+          : label.color;
       return (
         <Text key={`column-${i.toString()}`} color={labelColor}>
           {i === 0 ? '' : ' '}[{label.text}]
         </Text>
       );
     });
-  }, [countColumnLabels, isMonoMode]);
+  }, [countColumnLabels, isFocused, isMonoMode]);
 
   return (
-    <Box flexDirection="row">
+    <Box
+      flexDirection="row"
+      backgroundColor={isFocused ? palette.accent : undefined}
+    >
       <Text color={markerColor} bold={markerBold}>
         {`${marker} `}
       </Text>
 
       <Text color={rowColor}>{prefix}</Text>
 
-      <Text color={iconColor}>{icon} </Text>
+      <Text color={rowColor}>{icon} </Text>
 
       <Text color={rowColor} bold={rowBold}>
         {node.name}
