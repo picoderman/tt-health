@@ -3,7 +3,8 @@ import { createHash } from 'node:crypto';
 import { readFileSync, readdirSync, statSync } from 'node:fs';
 import { join } from 'node:path';
 
-import { useState, useMemo, useRef } from 'react';
+// eslint-disable-next-line @blumintinc/blumint/use-latest-callback -- FileTree uses callback identity to invalidate memoized rows.
+import { useCallback, useState, useMemo, useRef } from 'react';
 import useLatestCallback from 'use-latest-callback';
 
 import type {
@@ -78,48 +79,57 @@ export const useFileTree = (
     child.unref();
   });
 
-  const getLabels = useLatestCallback((node: FileTreeNode) => {
-    const labels: FileTreeLabel[] = [];
+  // eslint-disable-next-line @blumintinc/blumint/use-latest-callback -- Labels must invalidate FileTree rows when counts change.
+  const getLabels = useCallback(
+    (node: FileTreeNode) => {
+      const labels: FileTreeLabel[] = [];
 
-    for (const rule of labelRules) {
-      if (rule.test(node.name, node.isDirectory)) {
-        labels.push(rule.label);
+      for (const rule of labelRules) {
+        if (rule.test(node.name, node.isDirectory)) {
+          labels.push(rule.label);
+        }
       }
-    }
 
-    const nodeCounts = commentCountMap.get(node.path);
-    if (!nodeCounts || Object.keys(nodeCounts).length === 0) {
+      const nodeCounts = commentCountMap.get(node.path);
+      if (!nodeCounts || Object.keys(nodeCounts).length === 0) {
+        return labels;
+      }
+
+      for (const pattern of commentPatterns) {
+        const count = nodeCounts[pattern] ?? 0;
+        if (count <= 0) {
+          continue;
+        }
+
+        labels.push({
+          text: `${pattern}: ${count.toString()}`,
+          color: palette.info,
+          placement: 'countColumn',
+        });
+      }
+
       return labels;
-    }
+    },
+    [commentCountMap, commentPatterns],
+  );
 
-    for (const pattern of commentPatterns) {
-      const count = nodeCounts[pattern] ?? 0;
-      if (count <= 0) {
-        continue;
+  // eslint-disable-next-line @blumintinc/blumint/use-latest-callback -- Sorting must update when counts change.
+  const getTotalCommentCount = useCallback(
+    (nodePath: string) => {
+      const counts = commentCountMap.get(nodePath);
+      if (!counts || Object.keys(counts).length === 0) {
+        return 0;
       }
+      return commentPatterns.reduce(
+        (total, pattern) => total + (counts[pattern] ?? 0),
+        0,
+      );
+    },
+    [commentCountMap, commentPatterns],
+  );
 
-      labels.push({
-        text: `${pattern}: ${count.toString()}`,
-        color: palette.info,
-        placement: 'countColumn',
-      });
-    }
-
-    return labels;
-  });
-
-  const getTotalCommentCount = useLatestCallback((nodePath: string) => {
-    const counts = commentCountMap.get(nodePath);
-    if (!counts || Object.keys(counts).length === 0) {
-      return 0;
-    }
-    return commentPatterns.reduce(
-      (total, pattern) => total + (counts[pattern] ?? 0),
-      0,
-    );
-  });
-
-  const sortEntries = useLatestCallback(
+  // eslint-disable-next-line @blumintinc/blumint/use-latest-callback -- Sorting must invalidate FileTree rows when counts change.
+  const sortEntries = useCallback(
     ({
       left,
       right,
@@ -139,6 +149,7 @@ export const useFileTree = (
 
       return left.name.localeCompare(right.name);
     },
+    [getTotalCommentCount],
   );
 
   return useMemo(() => {
